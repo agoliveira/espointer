@@ -5,6 +5,8 @@
 
 static TrackerStatus s_st;
 static uint32_t s_lastFixMs = 0;
+static float s_cmdAz = 0, s_cmdEl = 0;
+static bool  s_cmdValid = false;
 
 // Home capture accumulator
 static uint8_t s_accCount = 0;
@@ -41,14 +43,19 @@ static float wrap180(float deg)
     return deg;
 }
 
-// Map true azimuth/elevation to pan/tilt angles for 180/180 servos with
-// over-the-top flip. Pan 0-180 sweeps mountBearing-90 .. mountBearing+90.
-// Rear hemisphere: mirror pan, tilt goes past zenith (180 - el).
+// Map true azimuth/elevation to servo angles.
+// PAN_GEARED360: servo drives the antenna through gearRatio, full 360 sweep
+//   centered on mountBearing (seam directly behind). Tilt plain 0-90.
+// PAN_FLIP180: direct 180 pan, rear hemisphere via over-the-top tilt flip.
 void trackerAzElToServos(float azDeg, float elDeg, int16_t mountBearing,
+                         uint8_t panMode, float gearRatio,
                          float *panDeg, float *tiltDeg)
 {
     float rel = wrap180(azDeg - (float)mountBearing);
-    if (rel >= -90.0f && rel <= 90.0f) {
+    if (panMode == PAN_GEARED360) {
+        *panDeg = (rel + 180.0f) / gearRatio;
+        *tiltDeg = constrain(elDeg, 0.0f, 90.0f);
+    } else if (rel >= -90.0f && rel <= 90.0f) {
         *panDeg = rel + 90.0f;
         *tiltDeg = constrain(elDeg, 0.0f, 90.0f);
     } else {
@@ -69,6 +76,7 @@ void trackerResetHome()
     s_st.state = TRK_WAIT_HOME;
     s_accCount = 0;
     s_st.homeProgress = 0;
+    s_cmdValid = false;
     Serial.println("home cleared, waiting for fixes");
 }
 
@@ -150,8 +158,20 @@ void trackerOnFix(const GpsFix *fix, uint32_t nowMs)
         s_st.elevation = 0;
     }
 
+    // Deadband: skip movements smaller than deadbandDeg (antenna frame),
+    // keeps printed-gear backlash from hunting
+    if (s_cmdValid &&
+        fabsf(wrap180(s_st.azimuth - s_cmdAz)) < settings.deadbandDeg &&
+        fabsf(s_st.elevation - s_cmdEl) < settings.deadbandDeg) {
+        return;
+    }
+    s_cmdAz = s_st.azimuth;
+    s_cmdEl = s_st.elevation;
+    s_cmdValid = true;
+
     float pan, tilt;
-    trackerAzElToServos(s_st.azimuth, s_st.elevation, settings.mountBearing, &pan, &tilt);
+    trackerAzElToServos(s_st.azimuth, s_st.elevation, settings.mountBearing,
+                        settings.panMode, settings.panGearRatio, &pan, &tilt);
     servosSetTarget(pan, tilt);
 }
 
@@ -168,7 +188,8 @@ void trackerManualAim(float az, float el)
 {
     s_st.state = TRK_MANUAL;
     float pan, tilt;
-    trackerAzElToServos(az, el, settings.mountBearing, &pan, &tilt);
+    trackerAzElToServos(az, el, settings.mountBearing,
+                        settings.panMode, settings.panGearRatio, &pan, &tilt);
     servosSetTarget(pan, tilt);
     Serial.printf("manual aim az=%.1f el=%.1f -> pan=%.1f tilt=%.1f\n", az, el, pan, tilt);
 }

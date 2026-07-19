@@ -31,4 +31,5 @@ const TrackerStatus *trackerStatus();
 
 // Exposed for host-side testing
 void trackerAzElToServos(float azDeg, float elDeg, int16_t mountBearing,
+                         uint8_t panMode, float gearRatio,
                          float *panDeg, float *tiltDeg);

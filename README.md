@@ -12,6 +12,17 @@ serial CLI, NVS-persisted settings.
 
 Servo pins: pan GPIO4, tilt GPIO5. Type help on the serial monitor for the CLI.
 
+Pan modes:
+- geared360 (default): geared pan mechanism (Sentinel AAT lite gears are 48T
+  servo to 24T shaft, ratio 2.0), full 360 antenna coverage from a 180 servo,
+  tilt 0-90. Seam sits directly behind mountBearing; point it away from the
+  flying area. panGearRatio configurable for other gear sets.
+- flip180: direct-drive 180 pan, rear hemisphere reached by tilting past
+  vertical.
+
+deadbandDeg suppresses movements smaller than the set angle to stop printed
+gear backlash from hunting.
+
 Roadmap:
 - Phase 2: web configuration
 

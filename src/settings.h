@@ -1,7 +1,15 @@
 #pragma once
 #include <Arduino.h>
 
+enum PanMode : uint8_t {
+    PAN_GEARED360 = 0,  // geared pan, full 360 at antenna, tilt 0-90
+    PAN_FLIP180   = 1,  // direct 180 pan, rear hemisphere via tilt flip
+};
+
 struct Settings {
+    uint8_t  panMode;
+    float    panGearRatio;  // antenna deg : servo deg (2.0 = Sentinel gears)
+    float    deadbandDeg;   // ignore target changes smaller than this (antenna deg)
     uint16_t panMinUs;
     uint16_t panMaxUs;
     bool     panInv;
