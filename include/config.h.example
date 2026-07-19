@@ -1,0 +1,12 @@
+// espointer configuration
+// Copy this file to config.h and edit. config.h is gitignored.
+#pragma once
+
+// Must match the binding phrase flashed on your ELRS TX (and its backpack).
+#define BIND_PHRASE "your-bind-phrase-here"
+
+// WiFi channel the TX backpack transmits ESPNOW on. ELRS default is 1.
+#define ESPNOW_CHANNEL 1
+
+// Print a status line even when no telemetry is arriving (ms). 0 disables.
+#define STATUS_INTERVAL_MS 2000
