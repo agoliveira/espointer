@@ -10,6 +10,10 @@
 #include "uid.h"
 #include "msp.h"
 #include "crsf.h"
+#include "settings.h"
+#include "servos.h"
+#include "tracker.h"
+#include "cli.h"
 
 static uint8_t g_uid[6];
 
@@ -53,7 +57,11 @@ void setup()
     Serial.begin(115200);
     delay(2000); // allow USB CDC to enumerate
 
-    Serial.println("espointer phase 0");
+    Serial.println("espointer phase 1");
+
+    settingsLoad();
+    servosInit();
+    trackerInit();
 
     uidFromBindPhrase(BIND_PHRASE, g_uid);
     Serial.printf("UID from bind phrase: %02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -84,8 +92,17 @@ void loop()
 {
     static uint32_t lastStatus = 0;
     static uint32_t lastGpsCount = 0;
+    static uint32_t lastServoTick = 0;
 
     uint32_t now = millis();
+
+    cliPoll();
+
+    if (now - lastServoTick >= 20) {
+        servosTick(now - lastServoTick);
+        lastServoTick = now;
+    }
+    trackerLoop(now);
 
     // Print each new fix as it arrives
     if (g_pktGps != lastGpsCount) {
@@ -99,6 +116,7 @@ void loop()
                       fix.latE7 / 1e7, fix.lonE7 / 1e7, fix.altitudeM,
                       fix.speedKmhX10 / 10.0f, fix.headingDegX10 / 10.0f,
                       fix.satcnt);
+        trackerOnFix(&fix, now);
         lastStatus = now;
     }
 
@@ -106,12 +124,14 @@ void loop()
     if (now - lastStatus >= STATUS_INTERVAL_MS) {
         lastStatus = now;
         uint32_t age = g_fixValid ? (now - g_fixMillis) : 0;
-        Serial.printf("status: espnow=%lu tlm=%lu gps=%lu lastFixAge=%lums\n",
+        const TrackerStatus *st = trackerStatus();
+        Serial.printf("status: espnow=%lu tlm=%lu gps=%lu lastFixAge=%lums az=%.1f el=%.1f dist=%.0fm\n",
                       (unsigned long)g_pktTotal, (unsigned long)g_pktTlm,
                       (unsigned long)g_pktGps,
-                      g_fixValid ? (unsigned long)age : 0UL);
+                      g_fixValid ? (unsigned long)age : 0UL,
+                      st->azimuth, st->elevation, st->distanceM);
     }
 #endif
 
-    delay(10);
+    delay(5);
 }

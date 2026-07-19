@@ -6,10 +6,13 @@ antenna mount. Spiritual successor to the abandoned VirtualPilot Sentinel AAT.
 
 ## Status
 
-Phase 0: ESPNOW receive and CRSF GPS decode, output on USB serial.
+Phase 1: tracking. Home auto-capture, az/el math, 180/180 servos with
+over-the-top flip for the rear hemisphere, slew limiting, failsafe hold,
+serial CLI, NVS-persisted settings.
+
+Servo pins: pan GPIO4, tilt GPIO5. Type help on the serial monitor for the CLI.
 
 Roadmap:
-- Phase 1: tracking math, servo output, pan wrap, home capture, failsafe, NVS
 - Phase 2: web configuration
 
 ## Hardware
